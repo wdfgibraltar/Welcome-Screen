@@ -35,30 +35,38 @@
   <p class="sub" style="margin:18px 0 0;opacity:.65">Need help? Use the QR code or contact your property manager.</p>
 </div></div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="./qrcode.min.js"></script>
 <script>
-const API = "https://script.google.com/macros/s/AKfycbx1CqP381iABx-Ukqst5laDMv9N6noZwC3xklUUDc7rmt-ri6lGZcIJHE5eLwZL-z3Fvg/exec";
-const t = new URLSearchParams(location.search).get("t");
-const el = (id)=>document.getElementById(id);
+  var API = "https://script.google.com/macros/s/AKfycbx1CqP381iABx-Ukqst5laDMv9N6noZwC3xklUUDc7rmt-ri6lGZcIJHE5eLwZL-z3Fvg/exec";
+  function el(id){ return document.getElementById(id); }
+  function getToken(){ return new URLSearchParams(location.search).get("t"); }
 
-async function run(){
-  if(!t){ el("subtitle").innerHTML = '<span class="err">Missing link token.</span>'; return; }
-  const r = await fetch(`${API}?t=${encodeURIComponent(t)}`);
-  const d = await r.json();
-  if(d.error){ el("subtitle").innerHTML = `<span class="err">${d.error}</span>`; return; }
+  function loadData(t, cb){
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", API + "?t=" + encodeURIComponent(t), true);
+    xhr.onreadystatechange = function(){
+      if(xhr.readyState !== 4) return;
+      try { cb(null, JSON.parse(xhr.responseText)); }
+      catch(e){ cb(e); }
+    };
+    xhr.send(null);
+  }
 
-  const name = d.tenant_name || "Guest";
-  el("title").textContent = `Welcome, ${name}`;
-  el("subtitle").textContent = `We hope you enjoy your stay.`;
-  el("ssid").textContent = d.wifi_name || "—";
-  el("pass").textContent = d.wifi_password || "—";
-  el("apt").textContent = d.apt_label || "—";
-
-  const qrUrl = d.qr_url || location.origin;
-  el("qrtext").textContent = qrUrl;
-  QRCode.toCanvas(el("qrc"), qrUrl, { width: 240, margin: 1 });
-}
-run();
+  var t = getToken();
+  if(!t){ el("subtitle").innerHTML = '<span class="err">Missing link token.</span>'; }
+  else loadData(t, function(err, d){
+    if(err || !d || d.error){ el("subtitle").innerHTML = '<span class="err">'+((d&&d.error)||"Load failed")+'</span>'; return; }
+    el("title").textContent = "Welcome, " + (d.tenant_name || "Guest");
+    el("subtitle").textContent = "We hope you enjoy your stay.";
+    el("ssid").textContent = d.wifi_name || "—";
+    el("pass").textContent = d.wifi_password || "—";
+    el("apt").textContent = d.apt_label || "—";
+    var qrUrl = d.qr_url || location.href;
+    el("qrtext").textContent = qrUrl;
+    QRCode.toCanvas(el("qrc"), qrUrl, { width: 240, margin: 1 });
+  });
 </script>
+
 </body></html>
+
 
